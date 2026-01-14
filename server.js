@@ -18,11 +18,21 @@ const db = admin.firestore();
 // 2. Ruta para OBTENER las ventas (GET)
 app.get('/api/ventas', async (req, res) => {
   try {
-    const snapshot = await db.collection('ventas').get();
+    const { categoria, marca } = req.query; 
+    let query = db.collection('ventas');
+
+    if (categoria && categoria !== 'Todas') {
+      query = query.where('categoria', '==', categoria);
+    }
+    if (marca && marca !== 'Todas') {
+      query = query.where('marca', '==', marca);
+    }
+
+    const snapshot = await query.get();
     const ventas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    res.status(200).json(ventas);
+    res.json(ventas);
   } catch (error) {
-    res.status(500).send({ error: "Error al obtener datos" });
+    res.status(500).send({ error: "Error al filtrar en el servidor" });
   }
 });
 
@@ -31,21 +41,34 @@ app.post('/api/ventas', async (req, res) => {
   try {
     const { categoria, marca, monto } = req.body;
     
+    // Agregamos siempre un nuevo documento para tener historial
+    await db.collection('ventas').add({ 
+      categoria, 
+      marca, 
+      monto: Number(monto),
+      fecha: new Date()
+    });
     
-    const query = await db.collection('ventas').where('marca', '==', marca).get();
-    
-    if (query.empty) {
-     
-      await db.collection('ventas').add({ categoria, marca, monto: Number(monto) });
-    } else {
-      
-      const docId = query.docs[0].id;
-      await db.collection('ventas').doc(docId).update({ monto: Number(monto) });
-    }
-    
-    res.status(200).send({ message: "Venta guardada con éxito" });
+    res.status(200).send({ message: "Venta registrada con éxito" });
   } catch (error) {
     res.status(500).send({ error: "Error al guardar" });
+  }
+});
+
+
+// endpoint dinámico de categorias y marca 
+app.get('/api/config/productos', async (req, res) => {
+  try {
+    const doc = await db.collection('configuracion').doc('productos').get();
+    
+    if (!doc.exists) {
+      return res.status(404).send({ error: "Configuración no encontrada" });
+    }
+
+    // Retorna el objeto con las categorías y marcas
+    res.json(doc.data());
+  } catch (error) {
+    res.status(500).send({ error: "Error al leer la base de datos" });
   }
 });
 
