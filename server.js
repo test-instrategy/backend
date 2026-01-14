@@ -26,21 +26,37 @@ const db = admin.firestore();
 // 2. Ruta para OBTENER las ventas (GET)
 app.get('/api/ventas', async (req, res) => {
   try {
-    const { categoria, marca } = req.query; 
+    const { categoria, marca } = req.query;
     let query = db.collection('ventas');
 
-    if (categoria && categoria !== 'Todas') {
-      query = query.where('categoria', '==', categoria);
-    }
-    if (marca && marca !== 'Todas') {
-      query = query.where('marca', '==', marca);
-    }
+    if (categoria && categoria !== 'Todas') query = query.where('categoria', '==', categoria);
+    if (marca && marca !== 'Todas') query = query.where('marca', '==', marca);
 
     const snapshot = await query.get();
-    const ventas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    res.json(ventas);
+    
+    
+    const ventasMap = {};
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const key = `${data.categoria}-${data.marca}`;
+      
+      if (!ventasMap[key]) {
+        ventasMap[key] = {
+          categoria: data.categoria,
+          marca: data.marca,
+          monto: 0
+        };
+      }
+      ventasMap[key].monto += Number(data.monto || 0);
+    });
+
+    
+    const ventasAgrupadas = Object.values(ventasMap);
+    res.json(ventasAgrupadas);
+
   } catch (error) {
-    res.status(500).send({ error: "Error al filtrar en el servidor" });
+    res.status(500).send({ error: "Error al procesar ventas en el servidor" });
   }
 });
 
@@ -95,23 +111,19 @@ app.get('/api/ventas/stats', async (req, res) => {
     if (marca && marca !== 'Todas') query = query.where('marca', '==', marca);
 
     const snapshot = await query.get();
-    
     let totalVentas = 0;
-    let totalTransacciones = snapshot.size;
 
     snapshot.forEach(doc => {
-      totalVentas += Number(doc.data().monto || 0);
+      totalVentas += Number(doc.data().monto || 0); 
     });
-
-    const promedioVentas = totalTransacciones > 0 ? totalVentas / totalTransacciones : 0;
 
     res.json({
       totalVentas,
-      totalTransacciones,
-      promedioVentas
+      totalTransacciones: snapshot.size,
+      promedioVentas: snapshot.size > 0 ? totalVentas / snapshot.size : 0
     });
   } catch (error) {
-    res.status(500).send({ error: "Error al calcular estadísticas" });
+    res.status(500).send({ error: "Error en cálculos" });
   }
 });
 
