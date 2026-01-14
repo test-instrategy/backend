@@ -41,7 +41,11 @@ app.post('/api/ventas', async (req, res) => {
   try {
     const { categoria, marca, monto } = req.body;
     
-    // Agregamos siempre un nuevo documento para tener historial
+    
+    if (!categoria || !marca || !monto || Number(monto) <= 0) {
+      return res.status(400).send({ error: "Faltan campos obligatorios o el monto es inválido" });
+    }
+    
     await db.collection('ventas').add({ 
       categoria, 
       marca, 
@@ -51,7 +55,7 @@ app.post('/api/ventas', async (req, res) => {
     
     res.status(200).send({ message: "Venta registrada con éxito" });
   } catch (error) {
-    res.status(500).send({ error: "Error al guardar" });
+    res.status(500).send({ error: "Error interno al guardar en base de datos" });
   }
 });
 
