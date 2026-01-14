@@ -3,11 +3,19 @@ const admin = require('firebase-admin');
 const cors = require('cors');
 
 const app = express();
-app.use(cors()); 
+app.use(cors({
+  origin: 'https://ventas-app-42956.web.app'
+})); 
 app.use(express.json()); 
 
 
-const serviceAccount = require("./serviceAccountKey.json");
+let serviceAccount;
+
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+} else {
+  serviceAccount = require("./serviceAccountKey.json");
+}
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
@@ -108,7 +116,7 @@ app.get('/api/ventas/stats', async (req, res) => {
 });
 
 
-const PORT = 3000;
-app.listen(PORT, () => {
-  console.log(`Servidor Backend corriendo en http://localhost:${PORT}`);
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Servidor corriendo en puerto ${PORT}`);
 });
