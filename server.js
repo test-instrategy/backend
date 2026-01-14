@@ -73,6 +73,37 @@ app.get('/api/config/productos', async (req, res) => {
 });
 
 
+// stats
+app.get('/api/ventas/stats', async (req, res) => {
+  try {
+    const { categoria, marca } = req.query;
+    let query = db.collection('ventas');
+
+    if (categoria && categoria !== 'Todas') query = query.where('categoria', '==', categoria);
+    if (marca && marca !== 'Todas') query = query.where('marca', '==', marca);
+
+    const snapshot = await query.get();
+    
+    let totalVentas = 0;
+    let totalTransacciones = snapshot.size;
+
+    snapshot.forEach(doc => {
+      totalVentas += Number(doc.data().monto || 0);
+    });
+
+    const promedioVentas = totalTransacciones > 0 ? totalVentas / totalTransacciones : 0;
+
+    res.json({
+      totalVentas,
+      totalTransacciones,
+      promedioVentas
+    });
+  } catch (error) {
+    res.status(500).send({ error: "Error al calcular estadísticas" });
+  }
+});
+
+
 const PORT = 3000;
 app.listen(PORT, () => {
   console.log(`Servidor Backend corriendo en http://localhost:${PORT}`);
