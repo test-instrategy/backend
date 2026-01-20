@@ -37,3 +37,25 @@ exports.getConfig = async (req, res) => {
     res.status(500).send({ error: "Error de config" });
   }
 };
+
+
+exports.getIndicadoresMensuales = async (req, res) => {
+  try {
+    const { anio } = req.query;
+    const data = await ventaService.getIndicadoresMensuales(anio);
+    res.json(data);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ error: "Error calculando mensuales" });
+  }
+};
+
+exports.updateMetaMensual = async (req, res) => {
+  try {
+    const { id, valor } = req.body; 
+    await ventaService.updateMetaMensual(id, valor);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).send({ error: "Error guardando meta" });
+  }
+};
